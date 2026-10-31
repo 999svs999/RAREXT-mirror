@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RAREXT registry bundle</title>
+    <meta name="description" content="A static copy of the latest anchored RAREXT registry bundle, with its seed list, mirror, and Merkle root." />
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <main>
+      <section class="band">
+        <p class="eyebrow">Public artifact</p>
+        <h2>Registry bundle</h2>
+        <p class="section-lede">
+          This is a static copy of the latest anchored registry bundle. It is not a live
+          API. A reader can fetch the JSON, recompute the publication leaves, and check
+          that the Merkle root matches the root in the seed list.
+        </p>
+        <div class="facts">
+          <div>
+            <strong>Root</strong>
+            <span><code>46ef40bd237d320d71290e83788a175cfc88f699e378ab3a779fb73d28060d73</code></span>
+          </div>
+          <div>
+            <strong>Contents</strong>
+            <span>4 anchored publications · 5 challenges · 5 semantics · 1 anchor</span>
+          </div>
+          <div>
+            <strong>AI representations</strong>
+            <span>generative, bounded</span>
+          </div>
+          <div>
+            <strong>Bundle</strong>
+            <span><a href="./bundle.json">bundle.json</a></span>
+          </div>
+          <div>
+            <strong>Seed list</strong>
+            <span><a href="./seed.json">seed.json</a></span>
+          </div>
+          <div>
+            <strong>Mirror</strong>
+            <span><a href="../mirror/">workbench</a> · <a href="../mirror/gallery.html">gallery</a></span>
+          </div>
+          <div>
+            <strong>Verify</strong>
+            <span><a href="../mirror/verify.html?root=46ef40bd237d320d71290e83788a175cfc88f699e378ab3a779fb73d28060d73">run the pinned verifier</a></span>
+          </div>
+        </div>
+        <p class="small">
+          The verifier is the same one used by the registry and the mirror page. It
+          re-derives AI renditions from the committed model and seed, checks the embedded
+          blob bytes, and compares the recomputed root with the pinned root above:
+          <code>node --test apps/api/test/published-bundle.test.ts apps/web/test/published-mirror.test.ts</code>.
+        </p>
+        <p class="small">
+          <a href="../">Back to RAREXT</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
