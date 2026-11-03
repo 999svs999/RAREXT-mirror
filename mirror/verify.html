@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mirror verification — AI claims included</title>
+    <title>Mirror verification — FUTURISTIC included</title>
     <style>
       html { color-scheme: dark; }
       body { margin: 0; padding: 40px; background: #080a0e; color: #e3eaf3;
@@ -25,7 +25,7 @@
     </style>
   </head>
   <body>
-    <h1>This mirror is a copy. Here is whether it is a faithful one — and whether its AI claims replay.</h1>
+    <h1>This mirror is a copy. Here is whether it is a faithful one — and whether FUTURISTIC's published record holds.</h1>
     <div id="out" role="status" aria-live="polite"></div>
     <button id="check" type="button">Re-verify</button>
     <h2 id="ref-heading">Reference — name and verify an object</h2>
@@ -37,6 +37,13 @@
       <button id="resolve" type="button">Resolve</button>
     </div>
     <div id="refout" role="status" aria-live="polite" style="margin-top:10px;"></div>
+    <h2 id="statement-heading">Statement — what a key was owed, as of a frozen state</h2>
+    <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">
+      <input id="statement-key" type="text" spellcheck="false" autocomplete="off"
+             aria-labelledby="statement-heading"
+             style="flex:1; min-width:280px; padding:8px; border-radius:7px; border:1px solid #2d3846; background:#0d1117; color:#e3eaf3; font:inherit;"
+             placeholder="a key (64-hex keyId) — read from each registry's newest frozen state" />
+    </div>
     <script type="module">
       import { verifyBundle } from "./verify.js";
       import {
@@ -51,6 +58,7 @@
         urlForRarextUri,
         recordRootPreimages,
         stateArchivePreimage,
+        creditStatement,
       } from "./renditions.js";
       const out = document.getElementById("out");
 
@@ -351,10 +359,81 @@
                         failures.length > 0 ? "bad" : "ok",
                       ),
                     );
+                    // The statement, derived IN THIS BROWSER from the FROZEN credits: the same
+                    // core function the node answers with, run over the archived records we just
+                    // fetched and checked. A reader can see what a key was owed at a state whose
+                    // root it recomputed itself — no CLI, no repo, no trust in the node's now.
+                    const statementKey = (document.getElementById("statement-key") || {}).value || "";
+                    const wantedKey = String(statementKey).trim();
+                    if (wantedKey !== "" && archives.length > 0) {
+                      const frozen = archives[archives.length - 1];
+                      const derived = creditStatement(wantedKey, Array.isArray(frozen.credits) ? frozen.credits : []);
+                      const anchored = frozen.anchorRoot ? String(frozen.anchorRoot).slice(0, 16) + "…" : "?";
+                      sections.push(
+                        htmlRow(
+                          "Statement at " + entry.id + " (as of " + anchored + ")",
+                          "earned " + derived.credits.earned + " · spent " + derived.credits.spent + " · net " + derived.credits.net + " · weight " + derived.weight,
+                          failures.length > 0 ? "bad" : "ok",
+                        ),
+                      );
+                      for (const held of derived.holds) {
+                        sections.push(
+                          htmlRow(
+                            "  holds at " + entry.id,
+                            held.act + " · " + held.receipts + " receipt(s) · " + held.roots.length + " root(s)",
+                            failures.length > 0 ? "bad" : "ok",
+                          ),
+                        );
+                      }
+                    }
                   }
                 }
               } catch (historyError) {
                 sections.push(htmlRow("State chain at " + entry.id, "not served — a static site or a node from before archives existed", "dim"));
+              }
+
+              // Discovery: what this peer IS, and the peers IT knows — with provenance. A registry
+              // that answers /v1/nodes tells the reader who it is (the registry it serves and the
+              // root it committed) and which peers it knows, each labelled seed or admission. The
+              // label is what matters on a page for readers: inherited knowledge and a decision the
+              // community made are different claims, and the browser shows which is which. Absence
+              // is an answer, as with every other probe.
+              try {
+                const nodesResponse = await fetch(new URL("v1/nodes", base), { cache: "no-cache", signal: AbortSignal.timeout(10_000) });
+                if (!nodesResponse.ok) {
+                  sections.push(
+                    htmlRow(
+                      "Nodes at " + entry.id,
+                      nodesResponse.status === 404
+                        ? "serves no /v1/nodes — a static site or a node from before discovery"
+                        : "the node answered HTTP " + nodesResponse.status,
+                      "dim",
+                    ),
+                  );
+                } else {
+                  const nodesBody = await nodesResponse.json();
+                  const itself = nodesBody && nodesBody.self;
+                  const known = nodesBody && Array.isArray(nodesBody.known) ? nodesBody.known : null;
+                  if (!itself || !known) {
+                    sections.push(htmlRow("Nodes at " + entry.id, "its /v1/nodes is not shaped like a discovery view", "bad"));
+                  } else {
+                    const rootNote = itself.anchoredRoot
+                      ? "root " + String(itself.anchoredRoot).slice(0, 16) + "…"
+                      : "nothing committed";
+                    sections.push(
+                      htmlRow("Nodes at " + entry.id, "says it serves " + (itself.registry || "(unnamed)") + " · " + rootNote, "ok"),
+                    );
+                    for (const peer of known) {
+                      const provenance =
+                        peer.source === "admission"
+                          ? "admitted by decision" + (peer.admittedByProposal ? " " + String(peer.admittedByProposal).slice(0, 8) + "…" : "")
+                          : "from the seed it carries";
+                      sections.push(htmlRow("knows " + peer.id, peer.url + " · " + provenance, "ok"));
+                    }
+                  }
+                }
+              } catch (nodesError) {
+                sections.push(htmlRow("Nodes at " + entry.id, "not served — a static site or a node from before discovery", "dim"));
               }
             }
           }
